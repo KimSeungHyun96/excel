@@ -1,26 +1,25 @@
 package wise.co.kr.excel_processor.service
 
-import org.springframework.stereotype.Service
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Workbook
-import org.aspectj.apache.bcel.classfile.Utility.replace
+import org.springframework.stereotype.Service
 import java.text.DecimalFormat
 import java.time.format.DateTimeFormatter
 
-@Service
-class ProcessWDQExcel:ProcessExcelService {
 
-    //TODO:hashmap 만들고 생성된 hashmap 으로 엑셀 생성하는 로직 만들기
-    fun generateWDQExcel(
+@Service
+class ProcessSDQEtcExcel : ProcessExcelService {
+    fun generateSDQEtcExcel(
         sourceWorkbook: Workbook, targetWorkbook: Workbook, excelName: String
     ): Workbook {
         // 값진단결과
         val sourceSheet0 = sourceWorkbook.getSheet("(진단결과)값진단결과") ?: throw IllegalArgumentException("Sheet 0 not found")
         // 진단대상테이블
-//        val sourceSheet1 = sourceWorkbook.getSheet("(테이블선정)진단대상테이블") ?: throw IllegalArgumentException("Sheet 1 not found")
+//        val sourceSheet1 =
+//            sourceWorkbook.getSheet("(테이블선정)진단대상테이블") ?: throw IllegalArgumentException("Sheet 1 not found")
         // 도메인
 //        val sourceSheet2 = sourceWorkbook.getSheet("(룰설정)도메인") ?: throw IllegalArgumentException("Sheet 2 not found")
         // 업무규칙
@@ -29,7 +28,7 @@ class ProcessWDQExcel:ProcessExcelService {
 
         val dataHashMap0 = generateHashMap(sourceSheet0)
         dataHashMap0["파일명"] = excelName
-        dataHashMap0["진단도구명"] = sourceSheet0.getRow(0).getCell(1)
+        dataHashMap0["진단도구명"] = sourceSheet0.getRow(1).getCell(0)
         dataHashMap0["업무규칙 수"] = (sourceSheet4.physicalNumberOfRows - 1).toString()
         dataHashMap0["작업시간"] = getCurrentKoreanTime()
 
@@ -81,17 +80,33 @@ class ProcessWDQExcel:ProcessExcelService {
         //별도의 리스트는 필요하지 않을 듯
 
 //        val targetSheet2 = targetWorkbook.getSheetAt(2) ?: throw IllegalArgumentException("Target Sheet 2 not found")
-//
-//        for (i in 0 until sourceSheet2.physicalNumberOfRows) {
+//        val targetHeaderRow = targetSheet2.getRow(0) ?: throw IllegalArgumentException("TargetHeaderRow is not created")
+//        for (i in 0 until sourceSheet1.physicalNumberOfRows) {
+//            val sourceHeaderRow = sourceSheet1.getRow(0)
 //            val sourceRow = sourceSheet1.getRow(i) ?: continue
-//            val statusCell = sourceRow.getCell(3)
+//            val statusCell = sourceRow.getCell(1)
+//
 //            if (statusCell.stringCellValue == "대상") {
 //                val targetRow = targetSheet2.createRow(targetSheet2.physicalNumberOfRows)
-//                for (j in 0 until targetSheet2.getRow(0).physicalNumberOfCells) {
-//                    val sourceCell = sourceRow.getCell(j)
-//                    val value = getCellValueAsString(sourceCell)
-//                    targetRow.createCell(j).setCellValue(value)
+//                for (j in 0 until targetHeaderRow.physicalNumberOfCells) {
+//                    if (targetHeaderRow.getCell(j).toString() == "DBMS명") {
+//                        val value = dataHashMap0["DBMS명"].toString()
+//                        targetRow.createCell(j).setCellValue(value)
+//                    } else if (targetHeaderRow.getCell(j).toString() == "스키마명") {
+//                        val value = dataHashMap0["DB서비스명"].toString()
+//                        targetRow.createCell(j).setCellValue(value)
+//                    } else if (targetHeaderRow.getCell(j).toString() == "테이블명") {
+//                        val sourceCell = sourceRow.getCell(j - 2)
+//                        val value = getCellValueAsString(sourceCell)
+//                        targetRow.createCell(j).setCellValue(value)
+//                    } else {
+//                        val sourceCell = sourceRow.getCell(j - 2)
+//                        val value = getCellValueAsString(sourceCell)
+//                        targetRow.createCell(j).setCellValue(value)
+//                    }
 //                }
+//            } else {
+//                continue
 //            }
 //        }
 
@@ -101,31 +116,48 @@ class ProcessWDQExcel:ProcessExcelService {
 //        val targetSheet3 = targetWorkbook.getSheetAt(3) ?: throw IllegalArgumentException("Target Sheet 2 not found")
 //
 //        for (i in 1 until sourceSheet2.physicalNumberOfRows) {
-//            val sourceHeaderRowList : MutableList<String> = mutableListOf()
-//            sourceSheet2.getRow(0).forEach { cell -> sourceHeaderRowList.add(cell.toString()) }
-//            val targetHeaderRow = targetSheet3.getRow(0) ?: throw IllegalArgumentException("TargetHeaderRow is not created")
+//            val sourceHeaderRow = sourceSheet2.getRow(0) ?: throw IllegalArgumentException("HeaderRow is not created")
+//            val targetSourceHeaderRow = targetWorkbook.getSheetAt(3).getRow(0)
 //            val sourceRow = sourceSheet2.getRow(i) ?: continue
 //            val elementHashMap: HashMap<String, String> = hashMapOf()
+//            //SDQ 도메인 순서: 테이블, 컬럼, 데이터타입, 진단기준명, 도메인, 진단기준, 오류제외데이터
+//            if (sourceRow.getCell(5).toString().isNotBlank()) {
+//                for (j in 0 until sourceHeaderRow.physicalNumberOfCells) {
+//                    val sourceHeaderCell = sourceHeaderRow.getCell(j).toString()
+//                    val sourceCell = sourceRow.getCell(j).toString()
 //
-//            if (sourceRow.getCell(6).toString().isNotBlank()) {
-//
-//                for (j in 0 until sourceHeaderRowList.size) {
-//                    if(targetHeaderRow.getCell(j).toString().contains("의견")){
-//                        elementHashMap["의견"] = sourceRow.getCell(j).toString()
-//                    }else if(sourceHeaderRowList.contains(targetHeaderRow.getCell(j).toString())){
-//                        //sourceSheet2의 헤더로우에 해당 key를 가진 cell 인덱스를 찾아서 넣는다
-//                        elementHashMap[targetHeaderRow.getCell(j).toString()] = sourceRow.getCell(
-//                            sourceHeaderRowList.indexOf(targetHeaderRow.getCell(j).toString())
-//                        ).toString()
+//                    elementHashMap["DBMS명"] = dataHashMap0["DBMS명"].toString()
+//                    elementHashMap["스키마명"] = dataHashMap0["DB서비스명"].toString()
+//                    if (sourceHeaderCell == "테이블") {
+//                        elementHashMap["테이블명"] = sourceCell
+//                    } else if (sourceHeaderCell == "컬럼") {
+//                        elementHashMap["컬럼명"] = sourceCell
+//                    } else if (sourceHeaderCell == "데이터타입") {
+//                        elementHashMap["데이터타입"] = sourceCell
+//                    } else if (sourceHeaderCell == "진단기준명") {
+//                        elementHashMap["검증룰명"] = sourceCell
+//                    } else if (sourceHeaderCell == "도메인") {
+//                        elementHashMap["품질지표명"] = sourceCell
+//                    } else if (sourceHeaderCell == "진단기준") {
+//                        elementHashMap["검증룰"] = sourceCell
+//                    } else if (sourceHeaderCell == "오류제외데이터") {
+//                        elementHashMap["오류제외데이터"] = sourceCell
+//                    } else if (sourceHeaderCell.contains("의견")) {
+//                        elementHashMap["의견"] = sourceCell
 //                    }
+//
 //                }
 //
 //                val targetRow = targetSheet3.createRow(targetSheet3.physicalNumberOfRows)
 //
-//                for (k in 0 until targetHeaderRow.physicalNumberOfCells) {
-//                    targetRow.createCell(k).setCellValue(
-//                            elementHashMap[targetHeaderRow.getCell(k).toString()]
+//                for (k in 0 until targetSourceHeaderRow.physicalNumberOfCells) {
+//                    targetRow
+//                        .createCell(k).setCellValue(
+//                            elementHashMap.getValue(
+//                                targetSheet3.getRow(0).getCell(k).toString()
+//                            )
 //                        )
+//
 //                }
 //
 //                elementHashMap.clear()
@@ -139,12 +171,10 @@ class ProcessWDQExcel:ProcessExcelService {
     }
 
 
-
-
     private fun generateHashMap(sourceSheet: Sheet): HashMap<String, Any> {
         val resultMap = HashMap<String, Any>()
-        val keywordsToRow = listOf("기관명", "정보시스템명", "DBMS명", "DBMS서비스(스키마)명", "DBMS종류", "DBMS버전")
-        val keywordsToCol = listOf("진단건수", "오류건수", "오류율")
+        val keywordsToRow = listOf("기관명", "시스템", "DB명", "DB서비스명", "DB종류", "버전", "출력일 :")
+        val keywordsToCol = listOf("진단건수", "오류건수", "오류율(%)")
 
         for (rowIndex in 0..sourceSheet.lastRowNum) {
             val row = sourceSheet.getRow(rowIndex) ?: continue
@@ -158,28 +188,32 @@ class ProcessWDQExcel:ProcessExcelService {
                         val nextCell = row.getCell(cellIndex + 1)
                         if (nextCell != null) {
                             when (cellValue) {
-                                "정보시스템명" -> {
+                                "시스템" -> {
                                     resultMap["정보시스템명"] = getCellValueAsString(nextCell)
                                     resultMap["시스템명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS명" -> {
+                                "DB명" -> {
                                     resultMap["DBMS명"] = getCellValueAsString(nextCell)
-                                    resultMap["DBMS명"] = getCellValueAsString(nextCell)
+                                    resultMap["DB명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS서비스(스키마)명" -> {
+                                "DB서비스명" -> {
                                     resultMap["DB서비스명"] = getCellValueAsString(nextCell)
                                     resultMap["DB명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS종류" -> {
+                                "DB종류" -> {
                                     resultMap["DBMS종류"] = getCellValueAsString(nextCell)
                                     resultMap["DB종류"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS버전" -> {
+                                "버전" -> {
                                     resultMap["버전"] = getCellValueAsString(nextCell)
+                                }
+
+                                "출력일 :" -> {
+                                    resultMap["출력일"] = getCellValueAsString(nextCell)
                                 }
 
                                 else -> {
@@ -204,8 +238,8 @@ class ProcessWDQExcel:ProcessExcelService {
                                         resultMap["총 오류건수"] = getCellValueAsString(lastCell)
                                     }
 
-                                    "오류율" -> {
-                                        resultMap["총 오류율"] = getCellValueAsString2(lastCell)
+                                    "오류율(%)" -> {
+                                        resultMap["총 오류율"] = getCellValueAsString(lastCell)+"%"
                                     }
                                 }
                                 break
@@ -213,29 +247,25 @@ class ProcessWDQExcel:ProcessExcelService {
                         }
                     }
 
-                    cellValue.contains("출력일") -> {
-                        resultMap["출력일"] = cellValue.substring(cellValue.indexOf(":") + 1).trim()
-                    }
+//                    cellValue.contains("출력일") -> {
+//                        resultMap["출력일"] = cellValue.substring(cellValue.indexOf(":") + 1).trim()
+//                    }
 
-                    cellValue == "품질지표명" -> {
+                    cellValue == "진단항목" -> {
                         var newRowIndex = rowIndex + 1
                         var newRow = sourceSheet.getRow(newRowIndex)
                         var newCellValue = getCellValueAsString(newRow.getCell(cellIndex))
 
-                        while (newCellValue.isNotBlank() && newCellValue != "합계") {
+                        while (newCellValue.isNotBlank()) {
                             val qualityIndicatorHashMap: HashMap<String, List<String>> = hashMapOf()
 
                             val diagnosisCount = getCellValueAsString(newRow.getCell(cellIndex + 2))
                             val errorCount = getCellValueAsString(newRow.getCell(cellIndex + 3))
-                            var errorRate = getCellValueAsString2(newRow.getCell(cellIndex + 4))
+                            var errorRate = getCellValueAsString(newRow.getCell(cellIndex + 4))+"%"
 
                             // errorRate의 값이 ".123445%"라면 "0.123445%"로 변환
                             if (errorRate.startsWith(".")) {
                                 errorRate = "0"+errorRate // "."으로 시작하면 앞에 "0"을 붙임
-                            }
-
-                            if (errorRate.endsWith("%%")) {
-                                errorRate = replace(errorRate,"%%","%") // %%로 되어 있다면, %로 변경
                             }
 
                             qualityIndicatorHashMap[newCellValue] = listOf(diagnosisCount, errorCount, errorRate)
@@ -280,38 +310,6 @@ class ProcessWDQExcel:ProcessExcelService {
                             cell.localDateTimeCellValue.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                         } else {
                             decimalFormat.format(cell.numericCellValue) // 숫자를 쉼표로 구분된 형태로 출력
-                        }
-                    }
-                    CellType.BOOLEAN -> cell.booleanCellValue.toString()
-                    else -> cell.stringCellValue // 기타 경우 문자열로 처리
-                }
-            }
-            else -> ""
-        }
-    }
-
-    private fun getCellValueAsString2(cell: Cell): String {
-        val decimalFormat = DecimalFormat("#.####%") // 최대 10자리 소수점 표시
-
-        return when (cell.cellType) {
-            CellType.STRING -> cell.stringCellValue
-            CellType.NUMERIC -> {
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    cell.localDateTimeCellValue.toString()
-                } else {
-                    decimalFormat.format(cell.numericCellValue) // 소수점 형태로 변환
-                }
-            }
-            CellType.BOOLEAN -> cell.booleanCellValue.toString()
-            CellType.FORMULA -> {
-                // 수식 셀의 계산된 값을 직접 가져옵니다.
-                when (cell.cachedFormulaResultType) {
-                    CellType.STRING -> cell.stringCellValue
-                    CellType.NUMERIC -> {
-                        if (DateUtil.isCellDateFormatted(cell)) {
-                            cell.localDateTimeCellValue.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                        } else {
-                            decimalFormat.format(cell.numericCellValue) // 소수점 형태로 변환
                         }
                     }
                     CellType.BOOLEAN -> cell.booleanCellValue.toString()

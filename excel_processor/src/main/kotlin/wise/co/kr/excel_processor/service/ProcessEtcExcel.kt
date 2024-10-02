@@ -6,15 +6,14 @@ import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Workbook
-import org.aspectj.apache.bcel.classfile.Utility.replace
 import java.text.DecimalFormat
 import java.time.format.DateTimeFormatter
 
 @Service
-class ProcessWDQExcel:ProcessExcelService {
+class ProcessEtcExcel:ProcessExcelService {
 
     //TODO:hashmap 만들고 생성된 hashmap 으로 엑셀 생성하는 로직 만들기
-    fun generateWDQExcel(
+    fun generateEtcExcel(
         sourceWorkbook: Workbook, targetWorkbook: Workbook, excelName: String
     ): Workbook {
         // 값진단결과
@@ -29,7 +28,7 @@ class ProcessWDQExcel:ProcessExcelService {
 
         val dataHashMap0 = generateHashMap(sourceSheet0)
         dataHashMap0["파일명"] = excelName
-        dataHashMap0["진단도구명"] = sourceSheet0.getRow(0).getCell(1)
+        dataHashMap0["진단도구명"] = sourceSheet0.getRow(1).getCell(1)
         dataHashMap0["업무규칙 수"] = (sourceSheet4.physicalNumberOfRows - 1).toString()
         dataHashMap0["작업시간"] = getCurrentKoreanTime()
 
@@ -138,13 +137,10 @@ class ProcessWDQExcel:ProcessExcelService {
 
     }
 
-
-
-
     private fun generateHashMap(sourceSheet: Sheet): HashMap<String, Any> {
         val resultMap = HashMap<String, Any>()
-        val keywordsToRow = listOf("기관명", "정보시스템명", "DBMS명", "DBMS서비스(스키마)명", "DBMS종류", "DBMS버전")
-        val keywordsToCol = listOf("진단건수", "오류건수", "오류율")
+        val keywordsToRow = listOf("기관명", "시스템명", "DB명", "DBMS서비스명", "DB종류", "DBMS 버전", "진단기간")
+        val keywordsToCol = listOf("전체데이터", "오류테이터", "오류율(%)")
 
         for (rowIndex in 0..sourceSheet.lastRowNum) {
             val row = sourceSheet.getRow(rowIndex) ?: continue
@@ -156,30 +152,35 @@ class ProcessWDQExcel:ProcessExcelService {
                 when {
                     keywordsToRow.contains(cellValue) -> {
                         val nextCell = row.getCell(cellIndex + 1)
+                        val nextCell2 = row.getCell(cellIndex + 2) // cell 위치가 다름
                         if (nextCell != null) {
                             when (cellValue) {
-                                "정보시스템명" -> {
+                                "시스템명" -> {
                                     resultMap["정보시스템명"] = getCellValueAsString(nextCell)
                                     resultMap["시스템명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS명" -> {
+                                "DB명" -> {
                                     resultMap["DBMS명"] = getCellValueAsString(nextCell)
-                                    resultMap["DBMS명"] = getCellValueAsString(nextCell)
+                                    resultMap["DB명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS서비스(스키마)명" -> {
+                                "DBMS서비스명" -> {
                                     resultMap["DB서비스명"] = getCellValueAsString(nextCell)
                                     resultMap["DB명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS종류" -> {
+                                "DB종류" -> {
                                     resultMap["DBMS종류"] = getCellValueAsString(nextCell)
                                     resultMap["DB종류"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS버전" -> {
-                                    resultMap["버전"] = getCellValueAsString(nextCell)
+                                "DBMS 버전" -> {
+                                    resultMap["버전"] = getCellValueAsString(nextCell2)
+                                }
+
+                                "진단기간" -> {
+                                    resultMap["출력일"] = getCellValueAsString(nextCell)
                                 }
 
                                 else -> {
@@ -196,16 +197,16 @@ class ProcessWDQExcel:ProcessExcelService {
                             val lastCell = sourceSheet.getRow(i).getCell(cellIndex)
                             if (lastCell != null && getCellValueAsString(lastCell).isNotBlank()) {
                                 when (cellValue) {
-                                    "진단건수" -> {
+                                    "전체데이터" -> {
                                         resultMap["총 진단건수"] = getCellValueAsString(lastCell)
                                     }
 
-                                    "오류건수" -> {
+                                    "오류테이터" -> {
                                         resultMap["총 오류건수"] = getCellValueAsString(lastCell)
                                     }
 
-                                    "오류율" -> {
-                                        resultMap["총 오류율"] = getCellValueAsString2(lastCell)
+                                    "오류율(%)" -> {
+                                        resultMap["총 오류율"] = getCellValueAsString2(lastCell)+"%"
                                     }
                                 }
                                 break
@@ -213,29 +214,25 @@ class ProcessWDQExcel:ProcessExcelService {
                         }
                     }
 
-                    cellValue.contains("출력일") -> {
-                        resultMap["출력일"] = cellValue.substring(cellValue.indexOf(":") + 1).trim()
-                    }
+//                    cellValue.contains("출력일") -> {
+//                        resultMap["출력일"] = cellValue.substring(cellValue.indexOf(":") + 1).trim()
+//                    }
 
-                    cellValue == "품질지표명" -> {
+                    cellValue == "검증유형" -> {
                         var newRowIndex = rowIndex + 1
                         var newRow = sourceSheet.getRow(newRowIndex)
                         var newCellValue = getCellValueAsString(newRow.getCell(cellIndex))
 
-                        while (newCellValue.isNotBlank() && newCellValue != "합계") {
+                        while (newCellValue.isNotBlank() && newCellValue != "전체") {
                             val qualityIndicatorHashMap: HashMap<String, List<String>> = hashMapOf()
 
-                            val diagnosisCount = getCellValueAsString(newRow.getCell(cellIndex + 2))
-                            val errorCount = getCellValueAsString(newRow.getCell(cellIndex + 3))
-                            var errorRate = getCellValueAsString2(newRow.getCell(cellIndex + 4))
+                            val diagnosisCount = getCellValueAsString(newRow.getCell(cellIndex + 3))
+                            val errorCount = getCellValueAsString(newRow.getCell(cellIndex + 4))
+                            var errorRate = getCellValueAsString2(newRow.getCell(cellIndex + 5))+"%"
 
                             // errorRate의 값이 ".123445%"라면 "0.123445%"로 변환
                             if (errorRate.startsWith(".")) {
                                 errorRate = "0"+errorRate // "."으로 시작하면 앞에 "0"을 붙임
-                            }
-
-                            if (errorRate.endsWith("%%")) {
-                                errorRate = replace(errorRate,"%%","%") // %%로 되어 있다면, %로 변경
                             }
 
                             qualityIndicatorHashMap[newCellValue] = listOf(diagnosisCount, errorCount, errorRate)
@@ -291,7 +288,7 @@ class ProcessWDQExcel:ProcessExcelService {
     }
 
     private fun getCellValueAsString2(cell: Cell): String {
-        val decimalFormat = DecimalFormat("#.####%") // 최대 10자리 소수점 표시
+        val decimalFormat = DecimalFormat("#.####") // 최대 10자리 소수점 표시
 
         return when (cell.cellType) {
             CellType.STRING -> cell.stringCellValue

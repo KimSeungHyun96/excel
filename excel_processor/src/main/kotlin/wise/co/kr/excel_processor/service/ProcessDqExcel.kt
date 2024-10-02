@@ -6,15 +6,14 @@ import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Workbook
-import org.aspectj.apache.bcel.classfile.Utility.replace
 import java.text.DecimalFormat
 import java.time.format.DateTimeFormatter
 
 @Service
-class ProcessWDQExcel:ProcessExcelService {
+class ProcessDqExcel:ProcessExcelService {
 
     //TODO:hashmap 만들고 생성된 hashmap 으로 엑셀 생성하는 로직 만들기
-    fun generateWDQExcel(
+    fun generateDqExcel(
         sourceWorkbook: Workbook, targetWorkbook: Workbook, excelName: String
     ): Workbook {
         // 값진단결과
@@ -24,13 +23,19 @@ class ProcessWDQExcel:ProcessExcelService {
         // 도메인
 //        val sourceSheet2 = sourceWorkbook.getSheet("(룰설정)도메인") ?: throw IllegalArgumentException("Sheet 2 not found")
         // 업무규칙
-        val sourceSheet4 = sourceWorkbook.getSheet("(룰설정)업무규칙") ?: throw IllegalArgumentException("Sheet 4 not found")
+        val sourceSheet4 = sourceWorkbook.getSheet("컬럼별 진단기준 설정내역(업무규칙)") ?: throw IllegalArgumentException("Sheet 4 not found")
 
 
         val dataHashMap0 = generateHashMap(sourceSheet0)
         dataHashMap0["파일명"] = excelName
         dataHashMap0["진단도구명"] = sourceSheet0.getRow(0).getCell(1)
-        dataHashMap0["업무규칙 수"] = (sourceSheet4.physicalNumberOfRows - 1).toString()
+        //빈칸이 존재하는 셀이 있다면, 해당 셀이 마지막로우이기 때문에 건수가 늘어갈 가능성 존재
+        var cursor = 0
+        do{
+            cursor++
+        }while (!sourceSheet4.getRow(cursor).getCell(0).toString().isNullOrBlank())
+        dataHashMap0["업무규칙 수"] = (cursor - 1).toString()
+        //        dataHashMap0["업무규칙 수"] = (sourceSheet4.physicalNumberOfRows - 1).toString()
         dataHashMap0["작업시간"] = getCurrentKoreanTime()
 
         val targetSheet0 = targetWorkbook.getSheetAt(0) ?: throw IllegalArgumentException("Target Sheet 0 not found")
@@ -143,7 +148,7 @@ class ProcessWDQExcel:ProcessExcelService {
 
     private fun generateHashMap(sourceSheet: Sheet): HashMap<String, Any> {
         val resultMap = HashMap<String, Any>()
-        val keywordsToRow = listOf("기관명", "정보시스템명", "DBMS명", "DBMS서비스(스키마)명", "DBMS종류", "DBMS버전")
+        val keywordsToRow = listOf("기관명", "시스템", "DB명", "DB서비스명", "DB종류", "DBMS 버전")
         val keywordsToCol = listOf("진단건수", "오류건수", "오류율")
 
         for (rowIndex in 0..sourceSheet.lastRowNum) {
@@ -158,27 +163,27 @@ class ProcessWDQExcel:ProcessExcelService {
                         val nextCell = row.getCell(cellIndex + 1)
                         if (nextCell != null) {
                             when (cellValue) {
-                                "정보시스템명" -> {
+                                "시스템" -> {
                                     resultMap["정보시스템명"] = getCellValueAsString(nextCell)
                                     resultMap["시스템명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS명" -> {
+                                "DB명" -> {
                                     resultMap["DBMS명"] = getCellValueAsString(nextCell)
-                                    resultMap["DBMS명"] = getCellValueAsString(nextCell)
+                                    resultMap["DB명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS서비스(스키마)명" -> {
+                                "DB서비스명" -> {
                                     resultMap["DB서비스명"] = getCellValueAsString(nextCell)
                                     resultMap["DB명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS종류" -> {
+                                "DB종류" -> {
                                     resultMap["DBMS종류"] = getCellValueAsString(nextCell)
                                     resultMap["DB종류"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS버전" -> {
+                                "DBMS 버전" -> {
                                     resultMap["버전"] = getCellValueAsString(nextCell)
                                 }
 
@@ -217,25 +222,21 @@ class ProcessWDQExcel:ProcessExcelService {
                         resultMap["출력일"] = cellValue.substring(cellValue.indexOf(":") + 1).trim()
                     }
 
-                    cellValue == "품질지표명" -> {
+                    cellValue == "분석영역" -> {
                         var newRowIndex = rowIndex + 1
                         var newRow = sourceSheet.getRow(newRowIndex)
                         var newCellValue = getCellValueAsString(newRow.getCell(cellIndex))
 
-                        while (newCellValue.isNotBlank() && newCellValue != "합계") {
+                        while (newCellValue.isNotBlank() && newCellValue != "전체") {
                             val qualityIndicatorHashMap: HashMap<String, List<String>> = hashMapOf()
 
                             val diagnosisCount = getCellValueAsString(newRow.getCell(cellIndex + 2))
                             val errorCount = getCellValueAsString(newRow.getCell(cellIndex + 3))
-                            var errorRate = getCellValueAsString2(newRow.getCell(cellIndex + 4))
+                            var errorRate = getCellValueAsString2(newRow.getCell(cellIndex + 4))+"%"
 
                             // errorRate의 값이 ".123445%"라면 "0.123445%"로 변환
                             if (errorRate.startsWith(".")) {
                                 errorRate = "0"+errorRate // "."으로 시작하면 앞에 "0"을 붙임
-                            }
-
-                            if (errorRate.endsWith("%%")) {
-                                errorRate = replace(errorRate,"%%","%") // %%로 되어 있다면, %로 변경
                             }
 
                             qualityIndicatorHashMap[newCellValue] = listOf(diagnosisCount, errorCount, errorRate)
@@ -291,7 +292,7 @@ class ProcessWDQExcel:ProcessExcelService {
     }
 
     private fun getCellValueAsString2(cell: Cell): String {
-        val decimalFormat = DecimalFormat("#.####%") // 최대 10자리 소수점 표시
+        val decimalFormat = DecimalFormat("#.####") // 최대 10자리 소수점 표시
 
         return when (cell.cellType) {
             CellType.STRING -> cell.stringCellValue

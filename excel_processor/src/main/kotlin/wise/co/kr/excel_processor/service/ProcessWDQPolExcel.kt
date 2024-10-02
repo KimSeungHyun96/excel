@@ -6,15 +6,12 @@ import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.DateUtil
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Workbook
-import org.aspectj.apache.bcel.classfile.Utility.replace
-import java.text.DecimalFormat
-import java.time.format.DateTimeFormatter
 
 @Service
-class ProcessWDQExcel:ProcessExcelService {
+class ProcessWDQPolExcel:ProcessExcelService {
 
     //TODO:hashmap 만들고 생성된 hashmap 으로 엑셀 생성하는 로직 만들기
-    fun generateWDQExcel(
+    fun generateWDQPolExcel(
         sourceWorkbook: Workbook, targetWorkbook: Workbook, excelName: String
     ): Workbook {
         // 값진단결과
@@ -143,8 +140,8 @@ class ProcessWDQExcel:ProcessExcelService {
 
     private fun generateHashMap(sourceSheet: Sheet): HashMap<String, Any> {
         val resultMap = HashMap<String, Any>()
-        val keywordsToRow = listOf("기관명", "정보시스템명", "DBMS명", "DBMS서비스(스키마)명", "DBMS종류", "DBMS버전")
-        val keywordsToCol = listOf("진단건수", "오류건수", "오류율")
+        val keywordsToRow = listOf("기관명", "정보시스템명", "DB명", "DB서비스명", "DB종류", "버전")
+        val keywordsToCol = listOf("진단건수", "오류건수", "오류율(%)")
 
         for (rowIndex in 0..sourceSheet.lastRowNum) {
             val row = sourceSheet.getRow(rowIndex) ?: continue
@@ -163,22 +160,22 @@ class ProcessWDQExcel:ProcessExcelService {
                                     resultMap["시스템명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS명" -> {
+                                "DB명" -> {
                                     resultMap["DBMS명"] = getCellValueAsString(nextCell)
-                                    resultMap["DBMS명"] = getCellValueAsString(nextCell)
+                                    resultMap["DB명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS서비스(스키마)명" -> {
+                                "DB서비스명" -> {
                                     resultMap["DB서비스명"] = getCellValueAsString(nextCell)
                                     resultMap["DB명"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS종류" -> {
+                                "DB종류" -> {
                                     resultMap["DBMS종류"] = getCellValueAsString(nextCell)
                                     resultMap["DB종류"] = getCellValueAsString(nextCell)
                                 }
 
-                                "DBMS버전" -> {
+                                "버전" -> {
                                     resultMap["버전"] = getCellValueAsString(nextCell)
                                 }
 
@@ -204,8 +201,8 @@ class ProcessWDQExcel:ProcessExcelService {
                                         resultMap["총 오류건수"] = getCellValueAsString(lastCell)
                                     }
 
-                                    "오류율" -> {
-                                        resultMap["총 오류율"] = getCellValueAsString2(lastCell)
+                                    "오류율(%)" -> {
+                                        resultMap["총 오류율"] = getCellValueAsString(lastCell)+"%"
                                     }
                                 }
                                 break
@@ -217,7 +214,7 @@ class ProcessWDQExcel:ProcessExcelService {
                         resultMap["출력일"] = cellValue.substring(cellValue.indexOf(":") + 1).trim()
                     }
 
-                    cellValue == "품질지표명" -> {
+                    cellValue == "진단항목" -> {
                         var newRowIndex = rowIndex + 1
                         var newRow = sourceSheet.getRow(newRowIndex)
                         var newCellValue = getCellValueAsString(newRow.getCell(cellIndex))
@@ -227,15 +224,11 @@ class ProcessWDQExcel:ProcessExcelService {
 
                             val diagnosisCount = getCellValueAsString(newRow.getCell(cellIndex + 2))
                             val errorCount = getCellValueAsString(newRow.getCell(cellIndex + 3))
-                            var errorRate = getCellValueAsString2(newRow.getCell(cellIndex + 4))
+                            var errorRate = getCellValueAsString(newRow.getCell(cellIndex + 4))+"%"
 
                             // errorRate의 값이 ".123445%"라면 "0.123445%"로 변환
                             if (errorRate.startsWith(".")) {
                                 errorRate = "0"+errorRate // "."으로 시작하면 앞에 "0"을 붙임
-                            }
-
-                            if (errorRate.endsWith("%%")) {
-                                errorRate = replace(errorRate,"%%","%") // %%로 되어 있다면, %로 변경
                             }
 
                             qualityIndicatorHashMap[newCellValue] = listOf(diagnosisCount, errorCount, errorRate)
@@ -259,65 +252,18 @@ class ProcessWDQExcel:ProcessExcelService {
     }
 
     private fun getCellValueAsString(cell: Cell): String {
-        val decimalFormat = DecimalFormat("#,###") // 쉼표로 자리 구분
-
         return when (cell.cellType) {
             CellType.STRING -> cell.stringCellValue
             CellType.NUMERIC -> {
                 if (DateUtil.isCellDateFormatted(cell)) {
                     cell.localDateTimeCellValue.toString()
                 } else {
-                    decimalFormat.format(cell.numericCellValue) // 숫자를 쉼표로 구분된 형태로 출력
+                    cell.numericCellValue.toString()
                 }
             }
-            CellType.BOOLEAN -> cell.booleanCellValue.toString()
-            CellType.FORMULA -> {
-                // 수식 셀의 계산된 값을 직접 가져옵니다.
-                when (cell.cachedFormulaResultType) {
-                    CellType.STRING -> cell.stringCellValue
-                    CellType.NUMERIC -> {
-                        if (DateUtil.isCellDateFormatted(cell)) {
-                            cell.localDateTimeCellValue.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                        } else {
-                            decimalFormat.format(cell.numericCellValue) // 숫자를 쉼표로 구분된 형태로 출력
-                        }
-                    }
-                    CellType.BOOLEAN -> cell.booleanCellValue.toString()
-                    else -> cell.stringCellValue // 기타 경우 문자열로 처리
-                }
-            }
-            else -> ""
-        }
-    }
 
-    private fun getCellValueAsString2(cell: Cell): String {
-        val decimalFormat = DecimalFormat("#.####%") // 최대 10자리 소수점 표시
-
-        return when (cell.cellType) {
-            CellType.STRING -> cell.stringCellValue
-            CellType.NUMERIC -> {
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    cell.localDateTimeCellValue.toString()
-                } else {
-                    decimalFormat.format(cell.numericCellValue) // 소수점 형태로 변환
-                }
-            }
             CellType.BOOLEAN -> cell.booleanCellValue.toString()
-            CellType.FORMULA -> {
-                // 수식 셀의 계산된 값을 직접 가져옵니다.
-                when (cell.cachedFormulaResultType) {
-                    CellType.STRING -> cell.stringCellValue
-                    CellType.NUMERIC -> {
-                        if (DateUtil.isCellDateFormatted(cell)) {
-                            cell.localDateTimeCellValue.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                        } else {
-                            decimalFormat.format(cell.numericCellValue) // 소수점 형태로 변환
-                        }
-                    }
-                    CellType.BOOLEAN -> cell.booleanCellValue.toString()
-                    else -> cell.stringCellValue // 기타 경우 문자열로 처리
-                }
-            }
+            CellType.FORMULA -> cell.cellFormula
             else -> ""
         }
     }

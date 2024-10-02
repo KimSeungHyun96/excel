@@ -15,10 +15,10 @@ class ProcessDqubeExcel : ProcessExcelService {
         // 값진단결과
         val sourceSheet0 = sourceWorkbook.getSheet("(진단결과)값진단결과") ?: throw IllegalArgumentException("Sheet 0 not found")
         // 진단대상테이블
-        val sourceSheet1 =
-            sourceWorkbook.getSheet("(테이블선정)진단대상테이블") ?: throw IllegalArgumentException("Sheet 1 not found")
+//        val sourceSheet1 =
+//            sourceWorkbook.getSheet("(테이블선정)진단대상테이블") ?: throw IllegalArgumentException("Sheet 1 not found")
         // 도메인
-        val sourceSheet2 = sourceWorkbook.getSheet("(룰설정)도메인") ?: throw IllegalArgumentException("Sheet 2 not found")
+//        val sourceSheet2 = sourceWorkbook.getSheet("(룰설정)도메인") ?: throw IllegalArgumentException("Sheet 2 not found")
         // 업무규칙
         val sourceSheet4 = sourceWorkbook.getSheet("(룰설정)업무규칙") ?: throw IllegalArgumentException("Sheet 4 not found")
 
@@ -76,91 +76,91 @@ class ProcessDqubeExcel : ProcessExcelService {
         //상태가 "대상"인 row 의 테이블명, 상태, 범위조건, 의견 가져오기
         //별도의 리스트는 필요하지 않을 듯
 
-        val targetSheet2 = targetWorkbook.getSheetAt(2) ?: throw IllegalArgumentException("Target Sheet 2 not found")
-        val targetHeaderRow = targetSheet2.getRow(0) ?: throw IllegalArgumentException("TargetHeaderRow is not created")
-        for (i in 0 until sourceSheet1.physicalNumberOfRows) {
-            val sourceHeaderRow = sourceSheet1.getRow(0)
-            val sourceRow = sourceSheet1.getRow(i) ?: continue
-            val statusCell = sourceRow.getCell(3)
-
-            if (statusCell.stringCellValue == "대상") {
-                val targetRow = targetSheet2.createRow(targetSheet2.physicalNumberOfRows)
-                for (j in 0 until targetHeaderRow.physicalNumberOfCells) {
-                    if (targetHeaderRow.getCell(j).toString() == "DBMS명") {
-                        val value = dataHashMap0["DBMS명"].toString()
-                        targetRow.createCell(j).setCellValue(value)
-                    } else {
-                        targetRow.createCell(j).setCellValue(getCellValueAsString(sourceRow.getCell(j)))
-                    }
-                }
-            } else {
-                continue
-            }
-        }
+//        val targetSheet2 = targetWorkbook.getSheetAt(2) ?: throw IllegalArgumentException("Target Sheet 2 not found")
+//        val targetHeaderRow = targetSheet2.getRow(0) ?: throw IllegalArgumentException("TargetHeaderRow is not created")
+//        for (i in 0 until sourceSheet1.physicalNumberOfRows) {
+//            val sourceHeaderRow = sourceSheet1.getRow(0)
+//            val sourceRow = sourceSheet1.getRow(i) ?: continue
+//            val statusCell = sourceRow.getCell(3)
+//
+//            if (statusCell.stringCellValue == "대상") {
+//                val targetRow = targetSheet2.createRow(targetSheet2.physicalNumberOfRows)
+//                for (j in 0 until targetHeaderRow.physicalNumberOfCells) {
+//                    if (targetHeaderRow.getCell(j).toString() == "DBMS명") {
+//                        val value = dataHashMap0["DBMS명"].toString()
+//                        targetRow.createCell(j).setCellValue(value)
+//                    } else {
+//                        targetRow.createCell(j).setCellValue(getCellValueAsString(sourceRow.getCell(j)))
+//                    }
+//                }
+//            } else {
+//                continue
+//            }
+//        }
 
         //sheet 3
         //검증룰 명이 존재하는 row 의 테이블명, 컬럼명, 데이터타입, 검증룰명,품질지표명, 검증룰, 오류제외데이터, 의견 가져오기
         //source sheet 에서 row 를 기준으로 반복문을 돌면서 일치하는 단어가 있는 헤더 기준 셀을 복사해서 value 로 집어넣기
-        val targetSheet3 = targetWorkbook.getSheetAt(3) ?: throw IllegalArgumentException("Target Sheet 2 not found")
-
-        for (i in 1 until sourceSheet2.physicalNumberOfRows) {
-            val sourceHeaderRow = sourceSheet2.getRow(0) ?: throw IllegalArgumentException("HeaderRow is not created")
-            val targetSourceHeaderRow = targetWorkbook.getSheetAt(3).getRow(0)
-            val sourceRow = sourceSheet2.getRow(i) ?: continue
-            val elementHashMap: HashMap<String, String> = hashMapOf()
-
-            if (sourceRow.getCell(5).toString().isNotBlank()) {
-                for (j in 0 until sourceHeaderRow.physicalNumberOfCells) {
-
-                    val sourceHeaderCell = sourceHeaderRow.getCell(j).toString()
-                    val sourceCell = sourceRow.getCell(j).toString()
-
-                    if (sourceHeaderCell == "DBMS") {
-                        elementHashMap["DBMS명"] = sourceCell
-                    } else if (sourceHeaderCell == "스키마") {
-                        elementHashMap["스키마명"] = sourceCell
-                    } else if (sourceHeaderCell == "테이블") {
-                        elementHashMap["테이블명"] = sourceCell
-                    } else if (sourceHeaderCell == "컬럼") {
-                        elementHashMap["컬럼명"] = sourceCell
-                    } else if (sourceHeaderCell == "데이터타입") {
-                        elementHashMap["데이터타입"] = sourceCell
-                    } else if (sourceHeaderCell == "검증룰명") {
-                        elementHashMap["검증룰명"] = sourceCell
-                    } else if (sourceHeaderCell == "도메인") {
-                        elementHashMap["품질지표명"] = sourceCell
-                    } else if (sourceHeaderCell == "검증형식") {
-                        if(sourceRow.getCell(j-1).toString() == "코드"){
-                            elementHashMap["검증룰"] = ""
-                        }else{
-                            elementHashMap["검증룰"] = sourceCell
-                        }
-                    } else if (sourceHeaderCell == "오류제외데이터") {
-                        elementHashMap["오류제외데이터"] = sourceCell
-                    } else if (sourceHeaderCell.contains("의견")) {
-                        elementHashMap["의견"] = sourceCell
-                    }
-
-                }
-
-                val targetRow = targetSheet3.createRow(targetSheet3.physicalNumberOfRows)
-
-                for (k in 0 until targetSourceHeaderRow.physicalNumberOfCells) {
-                    targetRow
-                        .createCell(k).setCellValue(
-                            elementHashMap.getValue(
-                                targetSheet3.getRow(0).getCell(k).toString()
-                            )
-                        )
-
-                }
-
-                elementHashMap.clear()
-
-            } else {
-                continue
-            }
-        }
+//        val targetSheet3 = targetWorkbook.getSheetAt(3) ?: throw IllegalArgumentException("Target Sheet 2 not found")
+//
+//        for (i in 1 until sourceSheet2.physicalNumberOfRows) {
+//            val sourceHeaderRow = sourceSheet2.getRow(0) ?: throw IllegalArgumentException("HeaderRow is not created")
+//            val targetSourceHeaderRow = targetWorkbook.getSheetAt(3).getRow(0)
+//            val sourceRow = sourceSheet2.getRow(i) ?: continue
+//            val elementHashMap: HashMap<String, String> = hashMapOf()
+//
+//            if (sourceRow.getCell(5).toString().isNotBlank()) {
+//                for (j in 0 until sourceHeaderRow.physicalNumberOfCells) {
+//
+//                    val sourceHeaderCell = sourceHeaderRow.getCell(j).toString()
+//                    val sourceCell = sourceRow.getCell(j).toString()
+//
+//                    if (sourceHeaderCell == "DBMS") {
+//                        elementHashMap["DBMS명"] = sourceCell
+//                    } else if (sourceHeaderCell == "스키마") {
+//                        elementHashMap["스키마명"] = sourceCell
+//                    } else if (sourceHeaderCell == "테이블") {
+//                        elementHashMap["테이블명"] = sourceCell
+//                    } else if (sourceHeaderCell == "컬럼") {
+//                        elementHashMap["컬럼명"] = sourceCell
+//                    } else if (sourceHeaderCell == "데이터타입") {
+//                        elementHashMap["데이터타입"] = sourceCell
+//                    } else if (sourceHeaderCell == "검증룰명") {
+//                        elementHashMap["검증룰명"] = sourceCell
+//                    } else if (sourceHeaderCell == "도메인") {
+//                        elementHashMap["품질지표명"] = sourceCell
+//                    } else if (sourceHeaderCell == "검증형식") {
+//                        if(sourceRow.getCell(j-1).toString() == "코드"){
+//                            elementHashMap["검증룰"] = ""
+//                        }else{
+//                            elementHashMap["검증룰"] = sourceCell
+//                        }
+//                    } else if (sourceHeaderCell == "오류제외데이터") {
+//                        elementHashMap["오류제외데이터"] = sourceCell
+//                    } else if (sourceHeaderCell.contains("의견")) {
+//                        elementHashMap["의견"] = sourceCell
+//                    }
+//
+//                }
+//
+//                val targetRow = targetSheet3.createRow(targetSheet3.physicalNumberOfRows)
+//
+//                for (k in 0 until targetSourceHeaderRow.physicalNumberOfCells) {
+//                    targetRow
+//                        .createCell(k).setCellValue(
+//                            elementHashMap.getValue(
+//                                targetSheet3.getRow(0).getCell(k).toString()
+//                            )
+//                        )
+//
+//                }
+//
+//                elementHashMap.clear()
+//
+//            } else {
+//                continue
+//            }
+//        }
         return targetWorkbook
 
     }
@@ -247,12 +247,17 @@ class ProcessDqubeExcel : ProcessExcelService {
                         var newRow = sourceSheet.getRow(newRowIndex)
                         var newCellValue = getCellValueAsString(newRow.getCell(cellIndex))
 
-                        while (newCellValue.isNotBlank() && newCellValue.contains("기관")) {
+                        while (newCellValue.isNotBlank()) {
                             val qualityIndicatorHashMap: HashMap<String, List<String>> = hashMapOf()
 
                             val diagnosisCount = getCellValueAsString(newRow.getCell(cellIndex + 2))
                             val errorCount = getCellValueAsString(newRow.getCell(cellIndex + 3))
-                            val errorRate = getCellValueAsString(newRow.getCell(cellIndex + 4))
+                            var errorRate = getCellValueAsString(newRow.getCell(cellIndex + 4))
+
+                            // errorRate의 값이 ".123445%"라면 "0.123445%"로 변환
+                            if (errorRate.startsWith(".")) {
+                                errorRate = "0"+errorRate // "."으로 시작하면 앞에 "0"을 붙임
+                            }
 
                             qualityIndicatorHashMap[newCellValue] = listOf(diagnosisCount, errorCount, errorRate)
                             qualityIndicatorHashMapList.add(qualityIndicatorHashMap)
