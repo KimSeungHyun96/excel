@@ -27,7 +27,21 @@ class ProcessWDQPolExcel:ProcessExcelService {
         val dataHashMap0 = generateHashMap(sourceSheet0)
         dataHashMap0["파일명"] = excelName
         dataHashMap0["진단도구명"] = sourceSheet0.getRow(0).getCell(1)
-        dataHashMap0["업무규칙 수"] = (sourceSheet4.physicalNumberOfRows - 1).toString()
+        //빈칸이 존재하는 셀이 있다면, 해당 셀이 마지막로우이기 때문에 건수가 늘어갈 가능성 존재
+        var cursor = 0
+        val totalRows = sourceSheet4.physicalNumberOfRows // 전체 행의 개수
+
+        // 실제 데이터를 가진 행을 찾는 반복문
+        for (i in 0 until totalRows) {
+            val row = sourceSheet4.getRow(i)
+            // 각 행의 첫 번째 셀이 null이 아니고 공백이 아닐 때만 cursor를 증가
+            if (row != null && !row.getCell(0).toString().isNullOrBlank()) {
+                cursor++
+            }
+        }
+        // 업무규칙 수를 빈 셀을 제외한 실제 데이터 행의 수로 설정
+        dataHashMap0["업무규칙 수"] = (cursor-1).toString()
+//        dataHashMap0["업무규칙 수"] = (sourceSheet4.physicalNumberOfRows - 1).toString()
         dataHashMap0["작업시간"] = getCurrentKoreanTime()
 
         val targetSheet0 = targetWorkbook.getSheetAt(0) ?: throw IllegalArgumentException("Target Sheet 0 not found")

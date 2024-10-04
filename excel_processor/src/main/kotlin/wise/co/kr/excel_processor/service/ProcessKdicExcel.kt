@@ -10,27 +10,25 @@ import java.text.DecimalFormat
 import java.time.format.DateTimeFormatter
 
 @Service
-class ProcessEtcExcel:ProcessExcelService {
+class ProcessKdicExcel:ProcessExcelService {
 
     //TODO:hashmap 만들고 생성된 hashmap 으로 엑셀 생성하는 로직 만들기
-    fun generateEtcExcel(
+    fun generateKdicExcel(
         sourceWorkbook: Workbook, targetWorkbook: Workbook, excelName: String
     ): Workbook {
         // 값진단결과
-        val sourceSheet0 = sourceWorkbook.getSheet("진단현황") ?: throw IllegalArgumentException("Sheet 0 not found")
-        //결과보고서
-        val sourceSheet2 = sourceWorkbook.getSheet("결과보고서") ?: throw IllegalArgumentException("Sheet 2 not found")
+        val sourceSheet0 = sourceWorkbook.getSheet("(진단결과)값진단결과") ?: throw IllegalArgumentException("Sheet 0 not found")
         // 진단대상테이블
 //        val sourceSheet1 = sourceWorkbook.getSheet("(테이블선정)진단대상테이블") ?: throw IllegalArgumentException("Sheet 1 not found")
         // 도메인
 //        val sourceSheet2 = sourceWorkbook.getSheet("(룰설정)도메인") ?: throw IllegalArgumentException("Sheet 2 not found")
         // 업무규칙
-        val sourceSheet4 = sourceWorkbook.getSheet("업무규칙 진단") ?: throw IllegalArgumentException("Sheet 4 not found")
+        val sourceSheet4 = sourceWorkbook.getSheet("(룰설정)업무규칙") ?: throw IllegalArgumentException("Sheet 4 not found")
+
 
         val dataHashMap0 = generateHashMap(sourceSheet0)
-        val dataHashMap2 = generateHashMap(sourceSheet2)
         dataHashMap0["파일명"] = excelName
-        dataHashMap0["진단도구명"] = "기타"
+        dataHashMap0["진단도구명"] = sourceSheet0.getRow(1).getCell(1)
         //빈칸이 존재하는 셀이 있다면, 해당 셀이 마지막로우이기 때문에 건수가 늘어갈 가능성 존재
         var cursor = 0
         val totalRows = sourceSheet4.physicalNumberOfRows // 전체 행의 개수
